@@ -105,7 +105,7 @@ function printHelp(): void {
 	printInfo("--alpha-logout              Clear alphaXiv auth and exit");
 	printInfo("--alpha-status              Show alphaXiv auth status and exit");
 	printInfo("--model provider:model      Force a specific model");
-	printInfo("--thinking level            off | low | medium | high");
+	printInfo("--thinking level            off | minimal | low | medium | high | xhigh");
 	printInfo("--cwd /path/to/workdir      Working directory for tools");
 	printInfo("--session-dir /path         Session storage directory");
 	printInfo("--doctor                    Alias for `feynman doctor`");
@@ -113,7 +113,6 @@ function printHelp(): void {
 
 	printSection("REPL");
 	printInfo("Inside the REPL, slash workflows come from the live prompt-template and extension command set.");
-	printInfo("Use `/help` in chat to browse the commands actually loaded in this session.");
 }
 
 async function handleAlphaCommand(action: string | undefined): Promise<void> {

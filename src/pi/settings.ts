@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 
 import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
 
-export type ThinkingLevel = "off" | "low" | "medium" | "high";
+export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
 export function parseModelSpec(spec: string, modelRegistry: ModelRegistry) {
 	const trimmed = spec.trim();
@@ -27,7 +27,14 @@ export function normalizeThinkingLevel(value: string | undefined): ThinkingLevel
 	}
 
 	const normalized = value.toLowerCase();
-	if (normalized === "off" || normalized === "low" || normalized === "medium" || normalized === "high") {
+	if (
+		normalized === "off" ||
+		normalized === "minimal" ||
+		normalized === "low" ||
+		normalized === "medium" ||
+		normalized === "high" ||
+		normalized === "xhigh"
+	) {
 		return normalized;
 	}
 

@@ -44,16 +44,7 @@ const FEYNMAN_AGENT_LOGO = [
 	"╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═══╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝",
 ];
 
-const FEYNMAN_MARK_ART = [
-	"            .-.",
-	"           /___\\\\",
-	"           |:::|",
-	"           |:::|",
-	"       .-'`:::::`'-.",
-	"      /:::::::::::::\\\\",
-	"      \\\\:::::::::::://",
-	"       '-.______.-'",
-];
+const FEYNMAN_MARK_ART: string[] = [];
 
 const FEYNMAN_RESEARCH_TOOLS = [
 	"alpha_search",
@@ -754,34 +745,6 @@ Recommended contents:
 `;
 }
 
-type HelpCommand = {
-	usage: string;
-	description: string;
-};
-
-function buildFeynmanHelpSections(pi: ExtensionAPI): Array<{ title: string; commands: HelpCommand[] }> {
-	const commands = pi.getCommands();
-	const promptCommands = sortCommands(commands.filter((command) => command.source === "prompt")).map((command) => ({
-		usage: `/${command.name}`,
-		description: command.description ?? "Prompt workflow",
-	}));
-	const extensionCommands = sortCommands(commands.filter((command) => command.source === "extension")).map((command) => ({
-		usage: `/${command.name}`,
-		description: command.description ?? "Extension command",
-	}));
-
-	return [
-		{
-			title: "Prompt Workflows",
-			commands: promptCommands,
-		},
-		{
-			title: "Commands",
-			commands: extensionCommands,
-		},
-	];
-}
-
 export default function researchTools(pi: ExtensionAPI): void {
 	let skillSummaryPromise: Promise<CatalogSummary> | undefined;
 	let agentSummaryPromise: Promise<CatalogSummary> | undefined;
@@ -801,186 +764,168 @@ export default function researchTools(pi: ExtensionAPI): void {
 		ctx.ui.setHeader((_tui, theme) => ({
 			render(width: number): string[] {
 				const maxAvailableWidth = Math.max(width - 2, 1);
-				const preferredWidth = Math.min(136, Math.max(72, maxAvailableWidth));
-				const cardWidth = Math.min(maxAvailableWidth, preferredWidth);
-				const innerWidth = cardWidth - 2;
-				const outerPadding = " ".repeat(Math.max(0, Math.floor((width - cardWidth) / 2)));
-				const title = truncateForWidth(` Feynman Research Agent v${FEYNMAN_VERSION} `, innerWidth);
-				const titledBorder = buildTitledBorder(innerWidth, title);
-				const modelLabel = getCurrentModelLabel(ctx);
-				const sessionLabel = ctx.sessionManager.getSessionName()?.trim() || ctx.sessionManager.getSessionId();
-				const directoryLabel = formatHeaderPath(ctx.cwd);
-				const recentActivity = getRecentActivitySummary(ctx);
-				const lines: string[] = [];
+					const preferredWidth = Math.min(136, Math.max(72, maxAvailableWidth));
+					const cardWidth = Math.min(maxAvailableWidth, preferredWidth);
+					const innerWidth = cardWidth - 2;
+					const outerPadding = " ".repeat(Math.max(0, Math.floor((width - cardWidth) / 2)));
+					const title = truncateForWidth(` Feynman Research Agent v${FEYNMAN_VERSION} `, innerWidth);
+					const titledBorder = buildTitledBorder(innerWidth, title);
+					const modelLabel = getCurrentModelLabel(ctx);
+					const sessionLabel = ctx.sessionManager.getSessionName()?.trim() || ctx.sessionManager.getSessionId();
+					const directoryLabel = formatHeaderPath(ctx.cwd);
+					const recentActivity = getRecentActivitySummary(ctx);
+					const lines: string[] = [];
 
-				const push = (line: string): void => {
-					lines.push(`${outerPadding}${line}`);
-				};
-
-				const renderBoxLine = (content: string): string =>
-					`${theme.fg("borderMuted", "│")}${content}${theme.fg("borderMuted", "│")}`;
-				const renderDivider = (): string =>
-					`${theme.fg("borderMuted", "├")}${theme.fg("borderMuted", "─".repeat(innerWidth))}${theme.fg("borderMuted", "┤")}`;
-				const styleAccentCell = (text: string, cellWidth: number): string =>
-					theme.fg("accent", theme.bold(padCell(text, cellWidth)));
-				const styleMutedCell = (text: string, cellWidth: number): string =>
-					theme.fg("muted", padCell(text, cellWidth));
-				const styleSuccessCell = (text: string, cellWidth: number): string =>
-					theme.fg("success", theme.bold(padCell(text, cellWidth)));
-				const styleWarningCell = (text: string, cellWidth: number): string =>
-					theme.fg("warning", theme.bold(padCell(text, cellWidth)));
-
-				push("");
-				for (const logoLine of FEYNMAN_AGENT_LOGO) {
-					push(theme.fg("accent", theme.bold(centerText(logoLine, cardWidth))));
-				}
-				push("");
-				push(
-					theme.fg("borderMuted", `╭${titledBorder.left}`) +
-						theme.fg("accent", theme.bold(title)) +
-						theme.fg("borderMuted", `${titledBorder.right}╮`),
-				);
-
-				if (innerWidth < 72) {
-					const activityLines = wrapForWidth(recentActivity, innerWidth, 2);
-					push(renderBoxLine(padCell("", innerWidth)));
-					push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Research session ready", innerWidth)))));
-					push(renderBoxLine(padCell(`model: ${modelLabel}`, innerWidth)));
-					push(renderBoxLine(padCell(`session: ${sessionLabel}`, innerWidth)));
-					push(renderBoxLine(padCell(`directory: ${directoryLabel}`, innerWidth)));
-					push(renderDivider());
-					push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Available tools", innerWidth)))));
-					for (const toolLine of toolSummary.lines.slice(0, 4)) {
-						push(renderBoxLine(padCell(toolLine, innerWidth)));
-					}
-					push(renderDivider());
-					push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Slash Commands", innerWidth)))));
-					for (const commandLine of commandSummary.lines.slice(0, 4)) {
-						push(renderBoxLine(padCell(commandLine, innerWidth)));
-					}
-					push(renderDivider());
-					push(renderBoxLine(theme.fg("success", theme.bold(padCell("Research Skills", innerWidth)))));
-					for (const skillLine of skillSummary.lines.slice(0, 4)) {
-						push(renderBoxLine(padCell(skillLine, innerWidth)));
-					}
-					if (agentSummary.lines.length > 0) {
-						push(renderDivider());
-						push(renderBoxLine(theme.fg("warning", theme.bold(padCell("Project Agents", innerWidth)))));
-						for (const agentLine of agentSummary.lines.slice(0, 3)) {
-							push(renderBoxLine(padCell(agentLine, innerWidth)));
-						}
-					}
-					push(renderDivider());
-					push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Recent activity", innerWidth)))));
-					for (const activityLine of activityLines.length > 0 ? activityLines : ["No messages yet in this session."]) {
-						push(renderBoxLine(padCell(activityLine, innerWidth)));
-					}
-					push(renderDivider());
-					push(
-						renderBoxLine(
-							padCell(
-								`${toolSummary.count} tools · ${commandSummary.count} commands · ${skillSummary.count} skills · /help`,
-								innerWidth,
-							),
-						),
-					);
-				} else {
-					const leftWidth = Math.min(44, Math.max(30, Math.floor(innerWidth * 0.36)));
-					const rightWidth = innerWidth - leftWidth - 3;
-					const activityLines = wrapForWidth(recentActivity, innerWidth, 2);
-					const wrappedToolLines = toolSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 3));
-					const wrappedCommandLines = commandSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 4));
-					const wrappedSkillLines = skillSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 4));
-					const wrappedAgentLines = agentSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 4));
-					const wrappedModelLines = wrapForWidth(`model: ${modelLabel}`, leftWidth, 2);
-					const wrappedDirectoryLines = wrapForWidth(`directory: ${directoryLabel}`, leftWidth, 2);
-					const wrappedSessionLines = wrapForWidth(`session: ${sessionLabel}`, leftWidth, 2);
-					const wrappedFooterLines = wrapForWidth(
-						`${toolSummary.count} tools · ${commandSummary.count} commands · ${skillSummary.count} skills · /help`,
-						leftWidth,
-						2,
-					);
-					const leftLines = [
-						...FEYNMAN_MARK_ART.map((line) => centerText(line, leftWidth)),
-						"",
-						centerText("Research shell ready", leftWidth),
-						"",
-						...wrappedModelLines,
-						...wrappedDirectoryLines,
-						...wrappedSessionLines,
-						"",
-						...wrappedFooterLines,
-					];
-					const rightLines = [
-						"Available Tools",
-						...wrappedToolLines,
-						"",
-						"Slash Commands",
-						...wrappedCommandLines,
-						"",
-						"Research Skills",
-						...wrappedSkillLines,
-						...(wrappedAgentLines.length > 0 ? ["", "Project Agents", ...wrappedAgentLines] : []),
-						"",
-						"Recent Activity",
-						...(activityLines.length > 0 ? activityLines : ["No messages yet in this session."]),
-					];
-					const row = (
-						left: string,
-						right: string,
-						options?: { leftAccent?: boolean; rightAccent?: boolean; leftMuted?: boolean; rightMuted?: boolean },
-					): string => {
-						const leftCell = options?.leftAccent
-							? styleAccentCell(left, leftWidth)
-							: options?.leftMuted
-								? styleMutedCell(left, leftWidth)
-								: padCell(left, leftWidth);
-						const rightCell = options?.rightAccent
-							? styleAccentCell(right, rightWidth)
-							: options?.rightMuted
-								? styleMutedCell(right, rightWidth)
-								: padCell(right, rightWidth);
-						return renderBoxLine(`${leftCell}${theme.fg("borderMuted", " │ ")}${rightCell}`);
+					const push = (line: string): void => {
+						lines.push(`${outerPadding}${line}`);
 					};
 
-					push(renderBoxLine(padCell("", innerWidth)));
-					for (let index = 0; index < Math.max(leftLines.length, rightLines.length); index += 1) {
-						const left = leftLines[index] ?? "";
-						const right = rightLines[index] ?? "";
-						const isLogoLine = index < FEYNMAN_MARK_ART.length;
-						const isRightSectionHeading =
-							right === "Available Tools" || right === "Slash Commands" || right === "Research Skills" || right === "Project Agents" ||
-							right === "Recent Activity";
-						const isResearchHeading = right === "Research Skills";
-						const isAgentHeading = right === "Project Agents";
-						const isFooterLine = left.includes("/help");
-						push(
-							(() => {
-								const leftCell = isLogoLine
-									? styleAccentCell(left, leftWidth)
-									: !isFooterLine && index >= FEYNMAN_MARK_ART.length + 2
-										? styleMutedCell(left, leftWidth)
-										: padCell(left, leftWidth);
-								const rightCell = isResearchHeading
-									? styleSuccessCell(right, rightWidth)
-									: isAgentHeading
-										? styleWarningCell(right, rightWidth)
-										: isRightSectionHeading
-											? styleAccentCell(right, rightWidth)
-											: right.length > 0
-												? styleMutedCell(right, rightWidth)
-												: padCell(right, rightWidth);
-								return renderBoxLine(`${leftCell}${theme.fg("borderMuted", " │ ")}${rightCell}`);
-							})(),
-						);
-					}
-				}
+					const renderBoxLine = (content: string): string =>
+						`${theme.fg("borderMuted", "│")}${content}${theme.fg("borderMuted", "│")}`;
+					const renderDivider = (): string =>
+						`${theme.fg("borderMuted", "├")}${theme.fg("borderMuted", "─".repeat(innerWidth))}${theme.fg("borderMuted", "┤")}`;
+					const styleAccentCell = (text: string, cellWidth: number): string =>
+						theme.fg("accent", theme.bold(padCell(text, cellWidth)));
+					const styleMutedCell = (text: string, cellWidth: number): string =>
+						theme.fg("muted", padCell(text, cellWidth));
+					const styleSuccessCell = (text: string, cellWidth: number): string =>
+						theme.fg("success", theme.bold(padCell(text, cellWidth)));
+					const styleWarningCell = (text: string, cellWidth: number): string =>
+						theme.fg("warning", theme.bold(padCell(text, cellWidth)));
 
-				push(theme.fg("borderMuted", `╰${"─".repeat(innerWidth)}╯`));
-				push("");
-				return lines;
-			},
-			invalidate() {},
+					push("");
+					for (const logoLine of FEYNMAN_AGENT_LOGO) {
+						push(theme.fg("accent", theme.bold(centerText(logoLine, cardWidth))));
+					}
+					push("");
+					push(
+						theme.fg("borderMuted", `╭${titledBorder.left}`) +
+							theme.fg("accent", theme.bold(title)) +
+							theme.fg("borderMuted", `${titledBorder.right}╮`),
+					);
+
+					if (innerWidth < 72) {
+						const activityLines = wrapForWidth(recentActivity, innerWidth, 2);
+						push(renderBoxLine(padCell("", innerWidth)));
+						push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Research session ready", innerWidth)))));
+						push(renderBoxLine(padCell(`model: ${modelLabel}`, innerWidth)));
+						push(renderBoxLine(padCell(`session: ${sessionLabel}`, innerWidth)));
+						push(renderBoxLine(padCell(`directory: ${directoryLabel}`, innerWidth)));
+						push(renderDivider());
+						push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Available tools", innerWidth)))));
+						for (const toolLine of toolSummary.lines.slice(0, 4)) {
+							push(renderBoxLine(padCell(toolLine, innerWidth)));
+						}
+						push(renderDivider());
+						push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Slash Commands", innerWidth)))));
+						for (const commandLine of commandSummary.lines.slice(0, 4)) {
+							push(renderBoxLine(padCell(commandLine, innerWidth)));
+						}
+						push(renderDivider());
+						push(renderBoxLine(theme.fg("success", theme.bold(padCell("Research Skills", innerWidth)))));
+						for (const skillLine of skillSummary.lines.slice(0, 4)) {
+							push(renderBoxLine(padCell(skillLine, innerWidth)));
+						}
+						if (agentSummary.lines.length > 0) {
+							push(renderDivider());
+							push(renderBoxLine(theme.fg("warning", theme.bold(padCell("Project Agents", innerWidth)))));
+							for (const agentLine of agentSummary.lines.slice(0, 3)) {
+								push(renderBoxLine(padCell(agentLine, innerWidth)));
+							}
+						}
+						push(renderDivider());
+						push(renderBoxLine(theme.fg("accent", theme.bold(padCell("Recent activity", innerWidth)))));
+						for (const activityLine of activityLines.length > 0 ? activityLines : ["No messages yet in this session."]) {
+							push(renderBoxLine(padCell(activityLine, innerWidth)));
+						}
+						push(renderDivider());
+						push(
+							renderBoxLine(
+								padCell(
+									`${toolSummary.count} tools · ${commandSummary.count} commands · ${skillSummary.count} skills`,
+									innerWidth,
+								),
+							),
+						);
+					} else {
+						const leftWidth = Math.min(44, Math.max(30, Math.floor(innerWidth * 0.36)));
+						const rightWidth = innerWidth - leftWidth - 3;
+						const activityLines = wrapForWidth(recentActivity, innerWidth, 2);
+						const wrappedToolLines = toolSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 3));
+						const wrappedCommandLines = commandSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 4));
+						const wrappedSkillLines = skillSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 4));
+						const wrappedAgentLines = agentSummary.lines.flatMap((line) => wrapForWidth(line, rightWidth, 4));
+						const wrappedModelLines = wrapForWidth(`model: ${modelLabel}`, leftWidth, 2);
+						const wrappedDirectoryLines = wrapForWidth(`directory: ${directoryLabel}`, leftWidth, 2);
+						const wrappedSessionLines = wrapForWidth(`session: ${sessionLabel}`, leftWidth, 2);
+						const wrappedFooterLines = wrapForWidth(
+							`${toolSummary.count} tools · ${commandSummary.count} commands · ${skillSummary.count} skills`,
+							leftWidth,
+							2,
+						);
+						const leftLines = [
+							...FEYNMAN_MARK_ART.map((line) => centerText(line, leftWidth)),
+							"",
+							centerText("Research shell ready", leftWidth),
+							"",
+							...wrappedModelLines,
+							...wrappedDirectoryLines,
+							...wrappedSessionLines,
+							"",
+							...wrappedFooterLines,
+						];
+						const rightLines = [
+							"Available Tools",
+							...wrappedToolLines,
+							"",
+							"Slash Commands",
+							...wrappedCommandLines,
+							"",
+							"Research Skills",
+							...wrappedSkillLines,
+							...(wrappedAgentLines.length > 0 ? ["", "Project Agents", ...wrappedAgentLines] : []),
+							"",
+							"Recent Activity",
+							...(activityLines.length > 0 ? activityLines : ["No messages yet in this session."]),
+						];
+
+						push(renderBoxLine(padCell("", innerWidth)));
+						for (let index = 0; index < Math.max(leftLines.length, rightLines.length); index += 1) {
+							const left = leftLines[index] ?? "";
+							const right = rightLines[index] ?? "";
+							const isLogoLine = index < FEYNMAN_MARK_ART.length;
+							const isRightSectionHeading =
+								right === "Available Tools" || right === "Slash Commands" || right === "Research Skills" || right === "Project Agents" ||
+								right === "Recent Activity";
+							const isResearchHeading = right === "Research Skills";
+							const isAgentHeading = right === "Project Agents";
+							push(
+								(() => {
+									const leftCell = isLogoLine
+										? styleAccentCell(left, leftWidth)
+										: index >= FEYNMAN_MARK_ART.length + 2
+											? styleMutedCell(left, leftWidth)
+											: padCell(left, leftWidth);
+									const rightCell = isResearchHeading
+										? styleSuccessCell(right, rightWidth)
+										: isAgentHeading
+											? styleWarningCell(right, rightWidth)
+											: isRightSectionHeading
+												? styleAccentCell(right, rightWidth)
+												: right.length > 0
+													? styleMutedCell(right, rightWidth)
+													: padCell(right, rightWidth);
+									return renderBoxLine(`${leftCell}${theme.fg("borderMuted", " │ ")}${rightCell}`);
+								})(),
+							);
+						}
+					}
+
+					push(theme.fg("borderMuted", `╰${"─".repeat(innerWidth)}╯`));
+					push("");
+					return lines;
+				},
+				invalidate() {},
 		}));
 	}
 
@@ -1025,31 +970,6 @@ export default function researchTools(pi: ExtensionAPI): void {
 
 			const name = getAlphaUserName();
 			ctx.ui.notify(name ? `alphaXiv connected as ${name}` : "alphaXiv connected", "info");
-		},
-	});
-
-	pi.registerCommand("help", {
-		description: "Show grouped Feynman commands and prefill the editor with a selected command.",
-		handler: async (_args, ctx) => {
-			const sections = buildFeynmanHelpSections(pi);
-			const items = sections.flatMap((section) => [
-				`--- ${section.title} ---`,
-				...section.commands.map((command) => `${command.usage} — ${command.description}`),
-			]).filter((item, index, array) => {
-				if (!item.startsWith("---")) {
-					return true;
-				}
-				return array[index + 1] !== undefined && !array[index + 1].startsWith("---");
-			});
-
-			const selected = await ctx.ui.select("Feynman Help", items);
-			if (!selected || selected.startsWith("---")) {
-				return;
-			}
-
-			const usage = selected.split(" — ")[0];
-			ctx.ui.setEditorText(usage);
-			ctx.ui.notify(`Prefilled ${usage}`, "info");
 		},
 	});
 

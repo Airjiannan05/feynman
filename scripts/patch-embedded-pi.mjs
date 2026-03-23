@@ -8,6 +8,7 @@ const appRoot = resolve(here, "..");
 const piPackageRoot = resolve(appRoot, "node_modules", "@mariozechner", "pi-coding-agent");
 const packageJsonPath = resolve(piPackageRoot, "package.json");
 const cliPath = resolve(piPackageRoot, "dist", "cli.js");
+const bunCliPath = resolve(piPackageRoot, "dist", "bun", "cli.js");
 const interactiveModePath = resolve(piPackageRoot, "dist", "modes", "interactive", "interactive-mode.js");
 const interactiveThemePath = resolve(piPackageRoot, "dist", "modes", "interactive", "theme", "theme.js");
 const piTuiRoot = resolve(appRoot, "node_modules", "@mariozechner", "pi-tui");
@@ -85,10 +86,14 @@ if (existsSync(packageJsonPath)) {
 	}
 }
 
-if (existsSync(cliPath)) {
-	const cliSource = readFileSync(cliPath, "utf8");
+for (const entryPath of [cliPath, bunCliPath]) {
+	if (!existsSync(entryPath)) {
+		continue;
+	}
+
+	const cliSource = readFileSync(entryPath, "utf8");
 	if (cliSource.includes('process.title = "pi";')) {
-		writeFileSync(cliPath, cliSource.replace('process.title = "pi";', 'process.title = "feynman";'), "utf8");
+		writeFileSync(entryPath, cliSource.replace('process.title = "pi";', 'process.title = "feynman";'), "utf8");
 	}
 }
 
@@ -112,7 +117,7 @@ if (existsSync(interactiveThemePath)) {
 		"    return {",
 		'        borderColor: (text) => " ".repeat(text.length),',
 		'        bgColor: (text) => theme.bg("userMessageBg", text),',
-		'        placeholderText: "Type your message or /help for commands",',
+		'        placeholderText: "Type your message",',
 		'        placeholder: (text) => theme.fg("dim", text),',
 		"        selectList: getSelectListTheme(),",
 		"    };",
@@ -127,9 +132,11 @@ if (existsSync(interactiveThemePath)) {
 
 if (existsSync(editorPath)) {
 	let editorSource = readFileSync(editorPath, "utf8");
-	const importOriginal = 'import { getSegmenter, isPunctuationChar, isWhitespaceChar, visibleWidth } from "../utils.js";';
-	const importReplacement = 'import { applyBackgroundToLine, getSegmenter, isPunctuationChar, isWhitespaceChar, visibleWidth } from "../utils.js";';
-	if (!editorSource.includes("applyBackgroundToLine") && editorSource.includes(importOriginal)) {
+	const importOriginal =
+		'import { getSegmenter, isPunctuationChar, isWhitespaceChar, truncateToWidth, visibleWidth } from "../utils.js";';
+	const importReplacement =
+		'import { applyBackgroundToLine, getSegmenter, isPunctuationChar, isWhitespaceChar, truncateToWidth, visibleWidth } from "../utils.js";';
+	if (editorSource.includes(importOriginal)) {
 		editorSource = editorSource.replace(importOriginal, importReplacement);
 	}
 	const desiredRender = [
@@ -168,6 +175,13 @@ if (existsSync(editorPath)) {
 		"        const result = [];",
 		'        const leftPadding = " ".repeat(paddingX);',
 		"        const rightPadding = leftPadding;",
+		"        const renderBorderLine = (indicator) => {",
+		"            const remaining = width - visibleWidth(indicator);",
+		"            if (remaining >= 0) {",
+		'                return this.borderColor(indicator + "─".repeat(remaining));',
+		"            }",
+		"            return this.borderColor(truncateToWidth(indicator, width));",
+		"        };",
 		"        // Render top padding row. When background fill is active, mimic the user-message block",
 		"        // instead of the stock editor chrome.",
 		"        if (bgColor) {",
@@ -181,8 +195,7 @@ if (existsSync(editorPath)) {
 		"        }",
 		"        else if (this.scrollOffset > 0) {",
 		"            const indicator = `─── ↑ ${this.scrollOffset} more `;",
-		"            const remaining = width - visibleWidth(indicator);",
-		'            result.push(this.borderColor(indicator + "─".repeat(Math.max(0, remaining))));',
+		"            result.push(renderBorderLine(indicator));",
 		"        }",
 		"        else {",
 		"            result.push(horizontal.repeat(width));",
@@ -205,7 +218,7 @@ if (existsSync(editorPath)) {
 		"            if (isPlaceholderLine) {",
 		"                const marker = emitCursorMarker ? CURSOR_MARKER : \"\";",
 		"                const rawPlaceholder = this.theme.placeholderText;",
-		"                const graphemes = [...segmenter.segment(rawPlaceholder)];",
+		"                const graphemes = [...this.segment(rawPlaceholder)];",
 		'                const firstGrapheme = graphemes[0]?.segment ?? " ";',
 		"                const restRaw = rawPlaceholder.slice(firstGrapheme.length);",
 		'                const restStyled = typeof this.theme.placeholder === "function"',
@@ -222,7 +235,7 @@ if (existsSync(editorPath)) {
 		"                if (after.length > 0) {",
 		"                    // Cursor is on a character (grapheme) - replace it with highlighted version",
 		"                    // Get the first grapheme from 'after'",
-		"                    const afterGraphemes = [...segmenter.segment(after)];",
+		"                    const afterGraphemes = [...this.segment(after)];",
 		'                    const firstGrapheme = afterGraphemes[0]?.segment || "";',
 		"                    const restAfter = after.slice(firstGrapheme.length);",
 		'                    const cursor = `\\x1b[7m${firstGrapheme}\\x1b[27m`;',
@@ -260,8 +273,7 @@ if (existsSync(editorPath)) {
 		"        }",
 		"        else if (linesBelow > 0) {",
 		"            const indicator = `─── ↓ ${linesBelow} more `;",
-		"            const remaining = width - visibleWidth(indicator);",
-		'            const bottomLine = this.borderColor(indicator + "─".repeat(Math.max(0, remaining)));',
+		"            const bottomLine = renderBorderLine(indicator);",
 		"            result.push(bottomLine);",
 		"        }",
 		"        else {",
