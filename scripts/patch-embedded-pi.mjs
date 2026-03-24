@@ -250,6 +250,18 @@ if (existsSync(sessionSearchIndexerPath)) {
 	}
 }
 
+const oauthPagePath = resolve(appRoot, "node_modules", "@mariozechner", "pi-ai", "dist", "utils", "oauth", "oauth-page.js");
+
+if (existsSync(oauthPagePath)) {
+	let source = readFileSync(oauthPagePath, "utf8");
+	const piLogo = 'const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" aria-hidden="true"><path fill="#fff" fill-rule="evenodd" d="M165.29 165.29 H517.36 V400 H400 V517.36 H282.65 V634.72 H165.29 Z M282.65 282.65 V400 H400 V282.65 Z"/><path fill="#fff" d="M517.36 400 H634.72 V634.72 H517.36 Z"/></svg>`;';
+	if (source.includes(piLogo)) {
+		const feynmanLogo = 'const LOGO_SVG = `<span style="font-size:32px;font-weight:700;color:#10b981;font-family:system-ui,sans-serif;letter-spacing:-0.02em">feynman</span>`;';
+		source = source.replace(piLogo, feynmanLogo);
+		writeFileSync(oauthPagePath, source, "utf8");
+	}
+}
+
 if (existsSync(piMemoryPath)) {
 	let source = readFileSync(piMemoryPath, "utf8");
 	const memoryOriginal = 'const MEMORY_DIR = join(homedir(), ".pi", "memory");';

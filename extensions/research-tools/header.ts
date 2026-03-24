@@ -1,5 +1,5 @@
 import { readdir } from "node:fs/promises";
-import { cpus, freemem, homedir, totalmem } from "node:os";
+import { cpus, homedir, totalmem } from "node:os";
 import { execSync } from "node:child_process";
 import { resolve as resolvePath } from "node:path";
 
@@ -133,33 +133,30 @@ type SystemResources = {
 	docker: boolean;
 };
 
-function detectSystemResources(): SystemResources {
-	const cores = cpus().length;
-	const cpu = cpus()[0]?.model?.trim() ?? "unknown";
-	const totalBytes = totalmem();
-	const freeBytes = freemem();
-	const ramTotal = `${Math.round(totalBytes / (1024 ** 3))}GB`;
-	const ramFree = `${Math.round(freeBytes / (1024 ** 3))}GB`;
+let cachedResources: SystemResources | null = null;
 
-	let gpu: string | null = null;
+function detectSystemResources(): SystemResources {
+	if (cachedResources) return cachedResources;
+
+	const cores = cpus().length;
+	const totalBytes = totalmem();
+	const ramTotal = `${Math.round(totalBytes / (1024 ** 3))}GB`;
+
+	cachedResources = { cpu: "", cores, ramTotal, ramFree: "", gpu: null, docker: false };
+
 	try {
 		if (process.platform === "darwin") {
-			const out = execSync("system_profiler SPDisplaysDataType 2>/dev/null | grep 'Chipset Model\\|Chip Model'", { encoding: "utf8", timeout: 3000 }).trim();
-			const match = out.match(/:\s*(.+)/);
-			if (match) gpu = match[1]!.trim();
-		} else {
-			const out = execSync("nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null", { encoding: "utf8", timeout: 3000 }).trim();
-			if (out) gpu = out.split("\n")[0]!.trim();
+			const out = execSync("sysctl -n machdep.cpu.brand_string 2>/dev/null", { encoding: "utf8", timeout: 1000 }).trim();
+			if (out) cachedResources.cpu = out;
 		}
 	} catch {}
 
-	let docker = false;
 	try {
-		execSync("docker info 2>/dev/null", { timeout: 3000 });
-		docker = true;
+		execSync("command -v docker >/dev/null 2>&1", { timeout: 500 });
+		cachedResources.docker = true;
 	} catch {}
 
-	return { cpu, cores, ramTotal, ramFree, gpu, docker };
+	return cachedResources;
 }
 
 type WorkflowInfo = { name: string; description: string };
@@ -268,10 +265,9 @@ export function installFeynmanHeader(
 					pushLabeled("directory", dirLabel, "text");
 					pushLabeled("session", sessionId, "dim");
 					leftLines.push("");
-					pushLabeled("cpu", `${resources.cores} cores`, "dim");
-					pushLabeled("ram", `${resources.ramFree} free / ${resources.ramTotal}`, "dim");
-					if (resources.gpu) pushLabeled("gpu", resources.gpu, "dim");
-					pushLabeled("docker", resources.docker ? "available" : "not found", "dim");
+					const sysParts = [`${resources.cores} cores`, resources.ramTotal];
+					if (resources.docker) sysParts.push("docker");
+					pushLabeled("system", sysParts.join(" · "), "dim");
 					leftLines.push("");
 					leftLines.push(theme.fg("dim", `${toolCount} tools · ${agentCount} agents`));
 
@@ -343,7 +339,7 @@ export function installFeynmanHeader(
 					push(row(`${theme.fg("dim", "model".padEnd(10))} ${theme.fg("text", truncateVisible(modelLabel, narrowValW))}`));
 					push(row(`${theme.fg("dim", "directory".padEnd(10))} ${theme.fg("text", truncateVisible(dirLabel, narrowValW))}`));
 					push(row(`${theme.fg("dim", "session".padEnd(10))} ${theme.fg("dim", truncateVisible(sessionId, narrowValW))}`));
-					const resourceLine = `${resources.cores} cores · ${resources.ramTotal} ram${resources.gpu ? ` · ${resources.gpu}` : ""}${resources.docker ? " · docker" : ""}`;
+					const resourceLine = `${resources.cores} cores · ${resources.ramTotal}${resources.docker ? " · docker" : ""}`;
 					push(row(theme.fg("dim", truncateVisible(resourceLine, contentW))));
 					push(row(theme.fg("dim", truncateVisible(`${toolCount} tools · ${agentCount} agents · ${commandCount} commands`, contentW))));
 					push(emptyRow());
