@@ -295,6 +295,15 @@ Use this file to track chronology, not release notes. Keep entries short, factua
 - Blockers: The duplicate-id warning remains as a build warning only, not a failing correctness gate.
 - Next: If desired, isolate the Astro duplicate-id warning separately with a minimal reproduction rather than mixing it into runtime/CLI maintenance.
 
+### 2026-04-14 10:55 PDT — summarize-workflow-restore
+
+- Objective: Restore the useful summarization workflow that had been closed in PR `#69` without being merged.
+- Changed: Added `prompts/summarize.md` as a top-level CLI workflow so `feynman summarize <source>` is available again; kept the RLM-based tiering approach from the original proposal and aligned Tier 3 confirmation behavior with the repo's unattended-run conventions.
+- Verified: Confirmed `feynman summarize <source>` appears in CLI help; ran `node bin/feynman.js summarize /tmp/feynman-summary-smoke.txt` against a local smoke file and verified it produced `outputs/feynman-summary-smoke-summary.md` plus the raw fetched note artifact under `outputs/.notes/`.
+- Failed / learned: None in the restored Tier 1 path; broader Tier 2/Tier 3 behavior still depends on runtime/model/tool availability, just like the other prompt-driven workflows.
+- Blockers: None for the prompt restoration itself.
+- Next: If desired, add dedicated docs for `summarize` and decide whether to reopen PR `#69` for historical continuity or leave it closed as superseded by the landed equivalent on `main`.
+
 ### 2026-04-12 13:20 PDT — capital-france (citation verification brief)
 
 - Objective: Verify citations in the capital-of-France draft and produce a cited verifier brief.
