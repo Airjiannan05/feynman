@@ -2,16 +2,17 @@
 
 `AGENTS.md` is the repo-level contract for agents working in this repository.
 
-Pi subagent behavior does **not** live here. The source of truth for bundled Pi subagents is `.feynman/agents/*.md`, which the runtime syncs into the Pi agent directory. If you need to change how `researcher`, `reviewer`, `writer`, or `verifier` behave, edit the corresponding file in `.feynman/agents/` instead of duplicating those prompts here.
+Pi subagent behavior does **not** live here. The source of truth for bundled Pi subagents is `.feynman/agents/*.md`, which the runtime syncs into the Pi agent directory. If you need to change how `researcher`, `reviewer`, `writer`, `verifier`, or `critic` behave, edit the corresponding file in `.feynman/agents/` instead of duplicating those prompts here.
 
 ## Pi subagents
 
-Feynman ships four bundled research subagents:
+Feynman ships five bundled research subagents:
 
 - `researcher`
 - `reviewer`
 - `writer`
 - `verifier`
+- `critic` (Anti-hallucination fact checker)
 
 They are defined in `.feynman/agents/` and invoked via the Pi `subagent` tool.
 
@@ -48,6 +49,7 @@ Every workflow that produces artifacts must derive a short **slug** from the top
 - Cited brief: `<slug>-brief.md`
 - Verification: `<slug>-verification.md`
 - Final output: `outputs/<slug>.md` or `papers/<slug>.md`
+- Paper LaTeX companion: `papers/<slug>.tex` (for paper-style runs)
 - Provenance: `<slug>.provenance.md` (next to the final output)
 
 Never use generic names like `research.md`, `draft.md`, `brief.md`, or `summary.md`. Concurrent runs must not collide.
@@ -76,4 +78,5 @@ Never use generic names like `research.md`, `draft.md`, `brief.md`, or `summary.
 - Use subagents when the work is meaningfully decomposable; do not spawn them for trivial work.
 - Prefer file-based handoffs over dumping large intermediate results back into parent context.
 - The lead agent is responsible for reconciling task completion. Subagents may not silently skip assigned tasks; skipped or merged tasks must be recorded in the plan artifact.
+- For literature drafting and synthesis, always implement a **Multi-Agent Reflection/Debate loop**. The `critic` agent must review the `writer` agent's output against the raw research to eliminate hallucinations before proceeding to cited stages.
 - For critical claims, require at least one adversarial verification pass after synthesis. Fix fatal issues before delivery or surface them explicitly.

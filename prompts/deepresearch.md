@@ -143,7 +143,13 @@ Before finalizing the draft, do a claim sweep:
 
 Save this draft to `outputs/.drafts/<slug>-draft.md`.
 
-## 6. Cite
+## 6. Reflect & Debate (Critic Loop)
+
+Before proceeding to citations, you must run a **Self-Reflection Debate** to guarantee factual consistency:
+1. Spawn the `critic` subagent against `<slug>-draft.md` and the research files. Its job is to hunt for LLM hallucinations, fabricated numbers, or over-extrapolated claims.
+2. Read the `critic`'s feedback. You MUST revise the draft to fix any flagged hallucinations or factual errors. 
+
+## 7. Cite
 
 Spawn the `verifier` agent to post-process YOUR draft. The verifier agent adds inline citations, verifies every source URL, and produces the final output:
 
@@ -153,7 +159,7 @@ Spawn the `verifier` agent to post-process YOUR draft. The verifier agent adds i
 
 The verifier agent does not rewrite the report — it only anchors claims to sources and builds the numbered Sources section.
 
-## 7. Verify
+## 8. Verify
 
 Spawn the `reviewer` agent against the cited draft. The reviewer checks for:
 - Unsupported claims that slipped past citation
@@ -175,6 +181,7 @@ Copy the final cited and verified output to the appropriate folder:
 - Everything else → `outputs/`
 
 Save the final output as `<slug>.md` (in `outputs/` or `papers/` per the rule above).
+If the final output is paper-style, also save `papers/<slug>.tex` as an Overleaf-ready LaTeX companion that mirrors the final Markdown content.
 
 Write a provenance record alongside it as `<slug>.provenance.md`:
 
@@ -196,6 +203,7 @@ Before you stop, verify on disk that all of these exist:
 - `outputs/.drafts/<slug>-draft.md`
 - `<slug>-brief.md` intermediate cited brief
 - `outputs/<slug>.md` or `papers/<slug>.md` final promoted deliverable
+- `papers/<slug>.tex` (required for paper-style outputs)
 - `outputs/<slug>.provenance.md` or `papers/<slug>.provenance.md` provenance sidecar
 
 Do not stop at `<slug>-brief.md` alone. If the cited brief exists but the promoted final output or provenance sidecar does not, create them before responding.
